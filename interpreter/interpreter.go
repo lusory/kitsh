@@ -12,7 +12,7 @@ import (
 // Interpreter is an implementation of InterpreterInterface responsible for interpreting
 // interactive console commands.
 type Interpreter struct {
-	Client    libkitsune.KitsuneClient
+	Client    *libkitsune.KitsuneClient
 	logErrors bool
 }
 
