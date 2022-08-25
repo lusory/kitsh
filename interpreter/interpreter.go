@@ -22,12 +22,12 @@ type InterpreterInterface interface {
 }
 
 // NewInterpreter connects to the supplied gRPC target and creates an Interpreter instance with it.
-func NewInterpreter(target string, ssl bool, logErrors bool) (Interpreter, error) {
+func NewInterpreter(target string, ssl bool, logErrors bool) (*Interpreter, error) {
 	client, err := libkitsune.NewKitsuneClient(target, ssl)
 	if err != nil {
-		return Interpreter{}, err
+		return &Interpreter{}, err
 	}
-	return Interpreter{client, logErrors}, nil
+	return &Interpreter{client, logErrors}, nil
 }
 
 // Interpret interprets an interactive console command and returns the output.
