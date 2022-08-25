@@ -39,8 +39,8 @@ func main() {
 		}
 	}
 	if interactive {
+		reader := bufio.NewReader(os.Stdin)
 		for {
-			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("kitsh> ")
 			text, _ := reader.ReadString('\n')
 			if out := intr.Interpret(text); out != "" {
