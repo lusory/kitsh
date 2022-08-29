@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +16,10 @@ import (
 	"strings"
 )
 
+// ConsoleCtxKey is a context key for commands invoked in an interactive console.
+var ConsoleCtxKey = "console command"
+
+// UnknownFormat is an error about a missing image format.
 var UnknownFormat = errors.New("unknown format")
 
 // main is the application entrypoint.
@@ -23,6 +28,13 @@ func main() {
 		Name:                 "kitsh",
 		Usage:                "A CLI for kitsune's gRPC API",
 		EnableBashCompletion: true,
+		ExitErrHandler: func(cCtx *cli.Context, err error) {
+			if cCtx.Context.Value(ConsoleCtxKey) != nil {
+				return // don't exit on interactive console errors
+			}
+
+			cli.HandleExitCoder(err)
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "target",
@@ -39,6 +51,32 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
+				Name:    "console",
+				Aliases: []string{"c", "interactive", "shell"},
+				Usage:   "launches an interactive console for issuing commands",
+				Action: func(cCtx *cli.Context) error {
+					reader := bufio.NewReader(os.Stdin)
+					file, _ := os.Executable()
+
+					for {
+						fmt.Print("kitsh> ")
+						text, _ := reader.ReadString('\n')
+						args := splitBySpace(strings.TrimSuffix(text, "\n"))
+						for len(args) > 0 && strings.HasPrefix(args[0], "-") {
+							args = args[1:] // remove any global arguments
+						}
+						if len(args) == 0 {
+							continue
+						}
+
+						newArgs := append([]string{file, "--target", cCtx.String("target")}, args...)
+						if err := cCtx.App.RunContext(context.WithValue(context.Background(), ConsoleCtxKey, args), newArgs); err != nil {
+							color.Red("%s", err)
+						}
+					}
+				},
+			},
+			{
 				Name:    "image",
 				Aliases: []string{"img", "images", "i"},
 				Usage:   "image registry specific actions",
@@ -47,7 +85,7 @@ func main() {
 						Name:  "list",
 						Usage: "list all images",
 						Action: func(cCtx *cli.Context) error {
-							client, err := libkitsune.NewKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+							client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
 							if err != nil {
 								return err
 							}
@@ -92,7 +130,7 @@ func main() {
 							},
 						},
 						Action: func(cCtx *cli.Context) error {
-							client, err := libkitsune.NewKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+							client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
 							if err != nil {
 								return err
 							}
@@ -133,4 +171,15 @@ func main() {
 		color.Red("%s", err)
 		os.Exit(1)
 	}
+}
+
+// splitBySpace splits the supplied string on spaces, honoring double-quoted substrings.
+func splitBySpace(s string) []string {
+	quoted := false
+	return strings.FieldsFunc(s, func(r rune) bool {
+		if r == '"' {
+			quoted = !quoted
+		}
+		return !quoted && r == ' '
+	})
 }

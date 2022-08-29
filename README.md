@@ -40,3 +40,13 @@ COMMANDS:
 OPTIONS:
    --help, -h  show help (default: false)
 ```
+```
+NAME:
+   kitsh console - launches an interactive console for issuing commands
+
+USAGE:
+   kitsh console [command options] [arguments...]
+
+OPTIONS:
+   --help, -h  show help (default: false)
+```
