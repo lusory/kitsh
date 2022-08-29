@@ -17,8 +17,9 @@ USAGE:
    kitsh [global options] command [command options] [arguments...]
 
 COMMANDS:
-   image, img, images, i  image registry specific actions
-   help, h                Shows a list of commands or help for one command
+   console, c, interactive, shell  launches an interactive console for issuing commands
+   image, img, images, i           image registry specific actions
+   help, h                         Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
    --help, -h                              show help (default: false)
