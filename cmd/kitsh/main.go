@@ -1,51 +1,136 @@
 package main
 
 import (
-	"bufio"
-	"flag"
+	"context"
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/lusory/kitsh/interpreter"
+	"github.com/lusory/libkitsune"
+	"github.com/lusory/libkitsune/proto/kitsune/proto/v1"
+	"github.com/rodaine/table"
+	"github.com/urfave/cli/v2"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"io"
 	"os"
+	"strings"
 )
+
+var UnknownFormat = errors.New("unknown format")
 
 // main is the application entrypoint.
 func main() {
-	var target string
-	var ssl bool
-	var command string
-	var interactive bool
-	flag.StringVar(&target, "target", "", "the kitsune gRPC target")
-	flag.BoolVar(&ssl, "ssl", false, "should an HTTPS connection be established? (default false)")
-	flag.StringVar(&command, "command", "", "the command to be interpreted (optional, used for one-liners without the console)")
-	flag.BoolVar(&interactive, "interactive", false, "should an interactive console be opened? (default false)")
-	flag.Parse()
+	app := &cli.App{
+		Name:                 "kitsh",
+		Usage:                "A CLI for kitsune's gRPC API",
+		EnableBashCompletion: true,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "target",
+				Aliases:  []string{"t", "host"},
+				Usage:    "the kitsune target to connect to",
+				Required: true,
+				EnvVars:  []string{"KITSUNE_TARGET"},
+			},
+			&cli.BoolFlag{
+				Name:  "ssl",
+				Usage: "should a HTTPS connection be opened instead of HTTP?",
+				Value: false,
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name:    "image",
+				Aliases: []string{"img", "images", "i"},
+				Usage:   "image registry specific actions",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "list",
+						Usage: "list all images",
+						Action: func(cCtx *cli.Context) error {
+							client, err := libkitsune.NewKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+							if err != nil {
+								return err
+							}
 
-	if command == "" && !interactive { // would be a no-op, so print help
-		flag.Usage()
-		return
+							images, err := client.ImageRegistry.GetImages(context.Background(), &emptypb.Empty{})
+							if err != nil {
+								return err
+							}
+
+							tbl := table.New("ID", "Format", "Size", "Read-only", "Media type")
+
+							for {
+								image, err := images.Recv()
+								if err == io.EOF {
+									break
+								} else if err != nil {
+									return err
+								}
+
+								tbl.AddRow(image.GetId().GetValue(), image.GetFormat().String(), image.GetSize(), image.GetReadOnly(), image.GetMediaType().String())
+							}
+
+							tbl.Print()
+							return nil
+						},
+					},
+					{
+						Name:  "create",
+						Usage: "creates an image",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "format",
+								Aliases:  []string{"f"},
+								Usage:    "the image format",
+								Required: true,
+							},
+							&cli.Uint64Flag{
+								Name:     "size",
+								Aliases:  []string{"s"},
+								Usage:    "the image size in bytes, must not be negative",
+								Required: true,
+							},
+						},
+						Action: func(cCtx *cli.Context) error {
+							client, err := libkitsune.NewKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+							if err != nil {
+								return err
+							}
+
+							format, ok := v1.Image_Format_value[strings.ToUpper(cCtx.String("format"))]
+							if !ok {
+								return UnknownFormat
+							}
+
+							oneof, err := client.ImageRegistry.CreateImage(
+								context.Background(),
+								&v1.CreateImageRequest{
+									Format: v1.Image_Format(format),
+									Size:   cCtx.Uint64("size"),
+								},
+							)
+							if err != nil {
+								return err
+							}
+							if oneof.GetError() != nil {
+								return errors.New(fmt.Sprintf("%s: %s", oneof.GetError().GetType(), oneof.GetError().GetMsg()))
+							}
+
+							image := oneof.GetImage()
+							tbl := table.New("ID", "Format", "Size", "Read-only", "Media type")
+							tbl.AddRow(image.GetId().GetValue(), image.GetFormat().String(), image.GetSize(), image.GetReadOnly(), image.GetMediaType().String())
+							tbl.Print()
+
+							return nil
+						},
+					},
+				},
+			},
+		},
 	}
 
-	intr, err := interpreter.NewInterpreter(target, ssl, true)
-	if err != nil {
-		color.Red("Connection error: %s", err.Error())
-		return
-	}
-	defer intr.Client.Close()
-
-	if command != "" {
-		if out := intr.Interpret(command); out != "" {
-			fmt.Println(out)
-		}
-	}
-	if interactive {
-		for {
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Print("kitsh> ")
-			text, _ := reader.ReadString('\n')
-			if out := intr.Interpret(text); out != "" {
-				fmt.Println(out)
-			}
-		}
+	if err := app.Run(os.Args); err != nil {
+		color.Red("%s", err)
+		os.Exit(1)
 	}
 }

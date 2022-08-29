@@ -2,30 +2,41 @@
 
 A CLI for kitsune's gRPC API, made in Go using libkitsune.
 
-# Installation
+## Installation
 You need to have a Go >=1.18 toolchain installed on your system.
 ```bash
 go install github.com/lusory/kitsh@latest
 ```
 
-# Usage
+## Usage
 ```
--command string
-    the command to be interpreted (optional, used for one-liners without the console)
--interactive
-    should an interactive console be opened? (default false)
--ssl
-    should an HTTPS connection be established? (default false)
--target string
-    the kitsune gRPC target
-```
+NAME:
+   kitsh - A CLI for kitsune's gRPC API
 
-The interactive console works in a `<registry>.<method> [data]` format. **Example:**
-* Currently available registries: `img` (ImageRegistryService) and `vm` (VirtualMachineRegistryService)
-* Methods are from the specified registry struct, see [libkitsune](https://github.com/lusory/libkitsune/blob/master/proto/kitsune/proto/v1/image_grpc.pb.go#L25) for those.
-* `data` is the JSON version of the protobuf request, defaults to an empty struct
-```
-kitsh> vm.GetVirtualMachines
+USAGE:
+   kitsh [global options] command [command options] [arguments...]
 
-kitsh> vm.FindVirtualMachine {"id":{"value":"add21b54-fc45-404d-b11d-222763e40172"}}
+COMMANDS:
+   image, img, images, i  image registry specific actions
+   help, h                Shows a list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --help, -h                              show help (default: false)
+   --ssl                                   should a HTTPS connection be opened instead of HTTP? (default: false)
+   --target value, -t value, --host value  the kitsune target to connect to [$KITSUNE_TARGET]
+```
+```
+NAME:
+   kitsh image - image registry specific actions
+
+USAGE:
+   kitsh image command [command options] [arguments...]
+
+COMMANDS:
+   list     list all images
+   create   creates an image
+   help, h  Shows a list of commands or help for one command
+
+OPTIONS:
+   --help, -h  show help (default: false)
 ```
