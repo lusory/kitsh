@@ -22,6 +22,12 @@ func Console(cCtx *cli.Context) error {
 		fmt.Print("kitsh> ")
 		text, _ := reader.ReadString('\n')
 		args := splitBySpace(strings.TrimSuffix(text, "\n"))
+		for i := range args {
+			// remove leading and trailing quotes
+			args[i] = strings.TrimFunc(args[i], func(r rune) bool {
+				return r == '\'' || r == '"'
+			})
+		}
 		for len(args) > 0 && strings.HasPrefix(args[0], "-") {
 			args = args[1:] // remove any global arguments
 		}
@@ -36,13 +42,17 @@ func Console(cCtx *cli.Context) error {
 	}
 }
 
-// splitBySpace splits the supplied string on spaces, honoring double-quoted substrings.
+// splitBySpace splits the supplied string on spaces, honoring double and single-quoted substrings.
 func splitBySpace(s string) []string {
-	quoted := false
+	currentQuoteChar := '\000'
 	return strings.FieldsFunc(s, func(r rune) bool {
-		if r == '"' {
-			quoted = !quoted
+		if r == '"' || r == '\'' {
+			if currentQuoteChar == '\000' {
+				currentQuoteChar = r
+			} else if currentQuoteChar == r {
+				currentQuoteChar = '\000'
+			}
 		}
-		return !quoted && r == ' '
+		return currentQuoteChar == '\000' && r == ' '
 	})
 }
