@@ -30,7 +30,12 @@ func main() {
 			},
 			&cli.BoolFlag{
 				Name:  "ssl",
-				Usage: "should a HTTPS connection be opened instead of HTTP?",
+				Usage: "enables SSL (TLS) for gRPC connections",
+				Value: false,
+			},
+			&cli.BoolFlag{
+				Name:  "no-pretty",
+				Usage: "disables pretty-printing of gRPC responses",
 				Value: false,
 			},
 		},

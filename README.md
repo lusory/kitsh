@@ -23,7 +23,8 @@ COMMANDS:
 
 GLOBAL OPTIONS:
    --help, -h                              show help (default: false)
-   --ssl                                   should a HTTPS connection be opened instead of HTTP? (default: false)
+   --no-pretty                             disables pretty-printing of gRPC responses (default: false)
+   --ssl                                   enables SSL (TLS) for gRPC connections (default: false)
    --target value, -t value, --host value  the kitsune target to connect to [$KITSUNE_TARGET]
 ```
 ```
@@ -34,13 +35,30 @@ USAGE:
    kitsh image command [command options] [arguments...]
 
 COMMANDS:
-   list     lists all images
-   create   creates an image
-   delete   deletes an image
-   help, h  Shows a list of commands or help for one command
+   list      lists all images
+   create    creates an image
+   delete    deletes an image
+   metadata  gets image metadata
+   help, h   Shows a list of commands or help for one command
 
 OPTIONS:
    --help, -h  show help (default: false)
+```
+```
+NAME:
+   kitsh image metadata - gets image metadata
+
+USAGE:
+   kitsh image metadata command [command options] [arguments...]
+
+COMMANDS:
+   set      sets image metadata
+   clear    clears image metadata, equivalent to setting '{}' as metadata
+   help, h  Shows a list of commands or help for one command
+
+OPTIONS:
+   --id value, -i value  the image UUID (must conform to a v4 UUID)
+   --help, -h            show help (default: false)
 ```
 ```
 NAME:

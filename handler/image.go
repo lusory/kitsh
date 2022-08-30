@@ -18,6 +18,24 @@ import (
 // UnknownFormat is an error about a missing image format.
 var UnknownFormat = errors.New("unknown format")
 
+// forEachImages invokes the supplied callback for every image in the supplied stream.
+func forEachImages(images v1.ImageRegistryService_GetImagesClient, forEach func(image *v1.Image) error) error {
+	for {
+		image, err := images.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		if err := forEach(image); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ListImages is a handler for the "image list" command.
 func ListImages(cCtx *cli.Context) error {
 	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
@@ -30,20 +48,32 @@ func ListImages(cCtx *cli.Context) error {
 		return err
 	}
 
-	tbl := table.New("ID", "Format", "Size", "Read-only", "Media type")
+	if cCtx.Bool("no-pretty") {
+		err = forEachImages(images, func(image *v1.Image) error {
+			data, err := json.Marshal(image)
+			if err != nil {
+				return err
+			}
 
-	for {
-		image, err := images.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
+			fmt.Println(string(data))
+			return nil
+		})
+		if err != nil {
 			return err
 		}
+	} else {
+		tbl := table.New("ID", "Format", "Size", "Read-only", "Media type")
 
-		tbl.AddRow(image.GetId().GetValue(), image.GetFormat().String(), image.GetSize(), image.GetReadOnly(), image.GetMediaType().String())
+		err = forEachImages(images, func(image *v1.Image) error {
+			tbl.AddRow(image.GetId().GetValue(), image.GetFormat().String(), image.GetSize(), image.GetReadOnly(), image.GetMediaType().String())
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		tbl.Print()
 	}
 
-	tbl.Print()
 	return nil
 }
 
@@ -83,15 +113,26 @@ func CreateImage(cCtx *cli.Context) error {
 	}
 
 	image := oneof.GetImage()
-	tbl := table.New("ID", "Format", "Size", "Read-only", "Media type", "Metadata")
-	tbl.AddRow(
-		image.GetId().GetValue(),
-		image.GetFormat().String(),
-		image.GetSize(),
-		image.GetReadOnly(),
-		image.GetMediaType().String(),
-	)
-	tbl.Print()
+
+	if cCtx.Bool("no-pretty") {
+		data, err := json.Marshal(image)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(data))
+		return nil
+	} else {
+		tbl := table.New("ID", "Format", "Size", "Read-only", "Media type", "Metadata")
+		tbl.AddRow(
+			image.GetId().GetValue(),
+			image.GetFormat().String(),
+			image.GetSize(),
+			image.GetReadOnly(),
+			image.GetMediaType().String(),
+		)
+		tbl.Print()
+	}
 
 	return nil
 }
