@@ -34,8 +34,9 @@ USAGE:
    kitsh image command [command options] [arguments...]
 
 COMMANDS:
-   list     list all images
+   list     lists all images
    create   creates an image
+   delete   deletes an image
    help, h  Shows a list of commands or help for one command
 
 OPTIONS:
