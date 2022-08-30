@@ -89,6 +89,46 @@ func main() {
 						},
 						Action: handler.DeleteImage,
 					},
+					{
+						Name:  "metadata",
+						Usage: "gets image metadata",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the image UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+						},
+						Action: handler.GetMetadata,
+						Subcommands: []*cli.Command{
+							{
+								Name:  "set",
+								Usage: "sets image metadata",
+								Flags: []cli.Flag{
+									&cli.StringFlag{
+										Name:    "data",
+										Aliases: []string{"d"},
+										Usage:   "the image metadata in JSON (a string-string map)",
+									},
+								},
+								Action: handler.SetMetadata,
+							},
+							{
+								Name:  "clear",
+								Usage: "clears image metadata, equivalent to setting '{}' as metadata",
+								Flags: []cli.Flag{
+									// workaround to not duplicate code from SetMetadata
+									&cli.StringFlag{
+										Name:   "data",
+										Value:  "{}",
+										Hidden: true,
+									},
+								},
+								Action: handler.ClearMetadata,
+							},
+						},
+					},
 				},
 			},
 		},
