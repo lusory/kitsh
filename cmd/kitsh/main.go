@@ -105,7 +105,7 @@ func main() {
 								Required: true,
 							},
 						},
-						Action: handler.GetMetadata,
+						Action: handler.GetImageMetadata,
 						Subcommands: []*cli.Command{
 							{
 								Name:  "set",
@@ -117,20 +117,84 @@ func main() {
 										Usage:   "the image metadata in JSON (a string-string map)",
 									},
 								},
-								Action: handler.SetMetadata,
+								Action: handler.SetImageMetadata,
 							},
 							{
 								Name:  "clear",
 								Usage: "clears image metadata, equivalent to setting '{}' as metadata",
 								Flags: []cli.Flag{
-									// workaround to not duplicate code from SetMetadata
+									// workaround to not duplicate code from SetImageMetadata
 									&cli.StringFlag{
 										Name:   "data",
 										Value:  "{}",
 										Hidden: true,
 									},
 								},
-								Action: handler.ClearMetadata,
+								Action: handler.ClearImageMetadata,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name:  "vm",
+				Usage: "virtual machine registry specific actions",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "vnc",
+						Usage: "launches a HTTP server serving a small VNC viewer",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:  "http-host",
+								Usage: "the host that the VNC viewer should be served on",
+								Value: ":8000",
+							},
+						},
+						Action: handler.VNC,
+					},
+					{
+						Name:  "metadata",
+						Usage: "gets virtual machine metadata",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+						},
+						Action: handler.GetVmMetadata,
+						Subcommands: []*cli.Command{
+							{
+								Name:  "set",
+								Usage: "sets virtual machine metadata",
+								Flags: []cli.Flag{
+									&cli.StringFlag{
+										Name:    "data",
+										Aliases: []string{"d"},
+										Usage:   "the virtual machine metadata in JSON (a string-string map)",
+									},
+								},
+								Action: handler.SetVmMetadata,
+							},
+							{
+								Name:  "clear",
+								Usage: "clears virtual machine metadata, equivalent to setting '{}' as metadata",
+								Flags: []cli.Flag{
+									// workaround to not duplicate code from SetImageMetadata
+									&cli.StringFlag{
+										Name:   "data",
+										Value:  "{}",
+										Hidden: true,
+									},
+								},
+								Action: handler.ClearVmMetadata,
 							},
 						},
 					},

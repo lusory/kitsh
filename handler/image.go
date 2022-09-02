@@ -109,7 +109,7 @@ func CreateImage(cCtx *cli.Context) error {
 		return err
 	}
 	if oneof.GetError() != nil {
-		return FormatError(oneof.GetError())
+		return formatError(oneof.GetError())
 	}
 
 	image := oneof.GetImage()
@@ -162,89 +162,36 @@ func DeleteImage(cCtx *cli.Context) error {
 		return err
 	}
 	if res.GetError() != nil {
-		return FormatError(res.GetError())
+		return formatError(res.GetError())
 	}
 
 	return nil
 }
 
-// GetMetadata is a handler for the "image metadata" command.
-func GetMetadata(cCtx *cli.Context) error {
+// GetImageMetadata is a handler for the "image metadata" command.
+func GetImageMetadata(cCtx *cli.Context) error {
 	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
 	if err != nil {
 		return err
 	}
 
-	id, err := uuid.Parse(cCtx.String("id"))
-	if err != nil {
-		return err
-	}
-
-	meta, err := client.ImageRegistry.GetMetadata(
-		context.Background(),
-		&v1.GetMetadataRequest{
-			Id: &v1.UUID{
-				Value: id.String(),
-			},
-		},
-	)
-
-	if err != nil {
-		return err
-	}
-	if meta.GetError() != nil {
-		return FormatError(meta.GetError())
-	}
-
-	data, _ := json.Marshal(meta.GetMeta().GetData())
-	fmt.Println(string(data))
-
-	return nil
+	return GetMetadataFunc(client.ImageRegistry)(cCtx)
 }
 
-// SetMetadata is a handler for the "image metadata set" command.
-func SetMetadata(cCtx *cli.Context) error {
+// SetImageMetadata is a handler for the "image metadata set" command.
+func SetImageMetadata(cCtx *cli.Context) error {
 	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
 	if err != nil {
 		return err
 	}
 
-	id, err := uuid.Parse(cCtx.String("id"))
-	if err != nil {
-		return err
-	}
-
-	data := make(map[string]string)
-	if err := json.Unmarshal([]byte(cCtx.String("data")), &data); err != nil {
-		return err
-	}
-
-	res, err := client.ImageRegistry.SetMetadata(
-		context.Background(),
-		&v1.SetMetadataRequest{
-			Id: &v1.UUID{
-				Value: id.String(),
-			},
-			Meta: &v1.MetadataMap{
-				Data: data,
-			},
-		},
-	)
-
-	if err != nil {
-		return err
-	}
-	if res.GetError() != nil {
-		return FormatError(res.GetError())
-	}
-
-	return nil
+	return SetMetadataFunc(client.ImageRegistry)(cCtx)
 }
 
-// ClearMetadata is a handler for the "image metadata clear" command.
-func ClearMetadata(cCtx *cli.Context) error {
+// ClearImageMetadata is a handler for the "image metadata clear" command.
+func ClearImageMetadata(cCtx *cli.Context) error {
 	if err := cCtx.Set("data", "{}"); err != nil {
 		return err
 	}
-	return SetMetadata(cCtx)
+	return SetImageMetadata(cCtx)
 }
