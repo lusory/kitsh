@@ -69,6 +69,13 @@ USAGE:
    kitsh vm command [command options] [arguments...]
 
 COMMANDS:
+   list      lists all virtual machines
+   create    creates a virtual machine
+   delete    deletes a virtual machine
+   status    queries a virtual machine for status
+   images    lists images attached to a virtual machine
+   attach    attaches an image to a virtual machine
+   detach    detaches an image from a virtual machine
    vnc       launches a HTTP server serving a small VNC viewer
    metadata  gets virtual machine metadata
    help, h   Shows a list of commands or help for one command

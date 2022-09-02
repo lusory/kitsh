@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/go-chi/chi/v5"
@@ -9,11 +11,325 @@ import (
 	"github.com/lusory/kitsh"
 	"github.com/lusory/libkitsune"
 	"github.com/lusory/libkitsune/proto/kitsune/proto/v1"
+	"github.com/rodaine/table"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"io"
 	"io/fs"
 	"net/http"
 	"strings"
 )
+
+var UnknownArchitecture = errors.New("unknown architecture")
+
+// forEachVms invokes the supplied callback for every virtual machine in the supplied stream.
+func forEachVms(vms v1.VirtualMachineRegistryService_GetVirtualMachinesClient, forEach func(image *v1.VirtualMachine) error) error {
+	for {
+		vm, err := vms.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		if err := forEach(vm); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ListVirtualMachines is a handler for the "vm list" command.
+func ListVirtualMachines(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	vms, err := client.VmRegistry.GetVirtualMachines(context.Background(), &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+
+	if cCtx.Bool("no-pretty") {
+		err = forEachVms(vms, func(vm *v1.VirtualMachine) error {
+			data, err := json.Marshal(vm)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(data))
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		tbl := table.New("ID", "Architecture", "Memory size")
+
+		err = forEachVms(vms, func(vm *v1.VirtualMachine) error {
+			tbl.AddRow(vm.GetId().GetValue(), vm.GetArch(), vm.GetMemorySize())
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		tbl.Print()
+	}
+
+	return nil
+}
+
+// CreateVirtualMachine is a handler for the "vm create" command.
+func CreateVirtualMachine(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	arch, ok := v1.Architecture_value[strings.ToUpper(cCtx.String("arch"))]
+	if !ok {
+		return UnknownArchitecture
+	}
+
+	data := make(map[string]string)
+	if err := json.Unmarshal([]byte(cCtx.String("data")), &data); err != nil {
+		return err
+	}
+
+	oneof, err := client.VmRegistry.CreateVirtualMachine(
+		context.Background(),
+		&v1.CreateVirtualMachineRequest{
+			Arch:       v1.Architecture(arch),
+			MemorySize: cCtx.Uint64("memory"),
+			Data: &v1.MetadataMap{
+				Data: data,
+			},
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+	if oneof.GetError() != nil {
+		return formatError(oneof.GetError())
+	}
+
+	vm := oneof.GetMachine()
+
+	if cCtx.Bool("no-pretty") {
+		data, err := json.Marshal(vm)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(data))
+		return nil
+	} else {
+		tbl := table.New("ID", "Architecture", "Memory size")
+		tbl.AddRow(
+			vm.GetId().GetValue(),
+			vm.GetArch(),
+			vm.GetMemorySize(),
+		)
+		tbl.Print()
+	}
+
+	return nil
+}
+
+// DeleteVirtualMachine is a handler for the "vm delete" command.
+func DeleteVirtualMachine(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	id, err := uuid.Parse(cCtx.String("id"))
+	if err != nil {
+		return err
+	}
+
+	res, err := client.VmRegistry.DeleteVirtualMachine(
+		context.Background(),
+		&v1.DeleteVirtualMachineRequest{
+			Id: &v1.UUID{
+				Value: id.String(),
+			},
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+	if res.GetError() != nil {
+		return formatError(res.GetError())
+	}
+
+	return nil
+}
+
+// GetStatus is a handler for the "vm status" command.
+func GetStatus(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	id, err := uuid.Parse(cCtx.String("id"))
+	if err != nil {
+		return err
+	}
+
+	res, err := client.VmRegistry.IsAlive(
+		context.Background(),
+		&v1.IsAliveRequest{
+			Id: &v1.UUID{
+				Value: id.String(),
+			},
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+	if res.GetError() != nil {
+		return formatError(res.GetError())
+	}
+
+	if cCtx.Bool("no-pretty") {
+		fmt.Println(res.GetAlive())
+	} else {
+		fmt.Print("Status: ")
+		if res.GetAlive() {
+			color.Green("Running")
+		} else {
+			color.Red("Stopped")
+		}
+	}
+	return nil
+}
+
+// Images is a handler for the "vm images" command.
+func Images(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	id, err := uuid.Parse(cCtx.String("id"))
+	if err != nil {
+		return err
+	}
+
+	images, err := client.VmRegistry.GetAttachedImages(
+		context.Background(),
+		&v1.GetAttachedImagesRequest{
+			Id: &v1.UUID{
+				Value: id.String(),
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if images.GetError() != nil {
+		return formatError(images.GetError())
+	}
+
+	if cCtx.Bool("no-pretty") {
+		for _, image := range images.GetImages() {
+			fmt.Println(image.GetValue())
+		}
+	} else {
+		tbl := table.New("Image ID")
+
+		for _, image := range images.GetImages() {
+			tbl.AddRow(image.GetValue())
+		}
+
+		tbl.Print()
+	}
+
+	return nil
+}
+
+// AttachImage is a handler for the "vm attach" command.
+func AttachImage(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	id, err := uuid.Parse(cCtx.String("id"))
+	if err != nil {
+		return err
+	}
+
+	image, err := uuid.Parse(cCtx.String("image"))
+	if err != nil {
+		return err
+	}
+
+	res, err := client.VmRegistry.AttachImage(
+		context.Background(),
+		&v1.AttachImageRequest{
+			Machine: &v1.UUID{
+				Value: id.String(),
+			},
+			Image: &v1.UUID{
+				Value: image.String(),
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if res.GetError() != nil {
+		return formatError(res.GetError())
+	}
+
+	return nil
+}
+
+// DetachImage is a handler for the "vm detach" command.
+func DetachImage(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	id, err := uuid.Parse(cCtx.String("id"))
+	if err != nil {
+		return err
+	}
+
+	image, err := uuid.Parse(cCtx.String("image"))
+	if err != nil {
+		return err
+	}
+
+	res, err := client.VmRegistry.DetachImage(
+		context.Background(),
+		&v1.DetachImageRequest{
+			Machine: &v1.UUID{
+				Value: id.String(),
+			},
+			Image: &v1.UUID{
+				Value: image.String(),
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if res.GetError() != nil {
+		return formatError(res.GetError())
+	}
+
+	return nil
+}
 
 // VNC is a handler for the "vm vnc" command.
 func VNC(cCtx *cli.Context) error {

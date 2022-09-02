@@ -141,6 +141,111 @@ func main() {
 				Usage: "virtual machine registry specific actions",
 				Subcommands: []*cli.Command{
 					{
+						Name:   "list",
+						Usage:  "lists all virtual machines",
+						Action: handler.ListVirtualMachines,
+					},
+					{
+						Name:  "create",
+						Usage: "creates a virtual machine",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "arch",
+								Aliases:  []string{"a"},
+								Usage:    "the virtual machine architecture",
+								Required: true,
+							},
+							&cli.Uint64Flag{
+								Name:     "memory",
+								Aliases:  []string{"m"},
+								Usage:    "the virtual machine RAM size in megabytes, must not be negative",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:    "data",
+								Aliases: []string{"d"},
+								Usage:   "the virtual machine metadata in JSON (a string-string map)",
+								Value:   "{}",
+							},
+						},
+						Action: handler.CreateVirtualMachine,
+					},
+					{
+						Name:  "delete",
+						Usage: "deletes a virtual machine",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+						},
+						Action: handler.DeleteVirtualMachine,
+					},
+					{
+						Name:  "status",
+						Usage: "queries a virtual machine for status",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+						},
+						Action: handler.GetStatus,
+					},
+					{
+						Name:  "images",
+						Usage: "lists images attached to a virtual machine",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+						},
+						Action: handler.Images,
+					},
+					{
+						Name:  "attach",
+						Usage: "attaches an image to a virtual machine",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "image",
+								Usage:    "the image UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+						},
+						Action: handler.AttachImage,
+					},
+					{
+						Name:  "detach",
+						Usage: "detaches an image from a virtual machine",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "image",
+								Usage:    "the image UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+						},
+						Action: handler.DetachImage,
+					},
+					{
 						Name:  "vnc",
 						Usage: "launches a HTTP server serving a small VNC viewer",
 						Flags: []cli.Flag{
