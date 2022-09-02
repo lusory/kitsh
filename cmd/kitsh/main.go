@@ -187,7 +187,7 @@ func main() {
 								Name:  "clear",
 								Usage: "clears virtual machine metadata, equivalent to setting '{}' as metadata",
 								Flags: []cli.Flag{
-									// workaround to not duplicate code from SetImageMetadata
+									// workaround to not duplicate code from SetVmMetadata
 									&cli.StringFlag{
 										Name:   "data",
 										Value:  "{}",

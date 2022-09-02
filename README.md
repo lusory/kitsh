@@ -19,6 +19,7 @@ USAGE:
 COMMANDS:
    console, c, interactive, shell  launches an interactive console for issuing commands
    image, img, images, i           image registry specific actions
+   vm                              virtual machine registry specific actions
    help, h                         Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
@@ -58,6 +59,37 @@ COMMANDS:
 
 OPTIONS:
    --id value, -i value  the image UUID (must conform to a v4 UUID)
+   --help, -h            show help (default: false)
+```
+```
+NAME:
+   kitsh vm - virtual machine registry specific actions
+
+USAGE:
+   kitsh vm command [command options] [arguments...]
+
+COMMANDS:
+   vnc       launches a HTTP server serving a small VNC viewer
+   metadata  gets virtual machine metadata
+   help, h   Shows a list of commands or help for one command
+
+OPTIONS:
+   --help, -h  show help (default: false)
+```
+```
+NAME:
+   kitsh vm metadata - gets virtual machine metadata
+
+USAGE:
+   kitsh vm metadata command [command options] [arguments...]
+
+COMMANDS:
+   set      sets virtual machine metadata
+   clear    clears virtual machine metadata, equivalent to setting '{}' as metadata
+   help, h  Shows a list of commands or help for one command
+
+OPTIONS:
+   --id value, -i value  the virtual machine UUID (must conform to a v4 UUID)
    --help, -h            show help (default: false)
 ```
 ```
