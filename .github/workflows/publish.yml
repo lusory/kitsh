@@ -31,6 +31,7 @@ jobs:
           artifactContentType: application/octet-stream
           draft: true
           tag: ${{ github.sha }}
+          allowUpdates: true
       - name: Publish artifacts
         uses: actions/upload-artifact@v3
         with:
