@@ -30,6 +30,7 @@ jobs:
           artifacts: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
           artifactContentType: application/octet-stream
           draft: true
+          tag: ${{ github.sha }}
       - name: Publish artifacts
         uses: actions/upload-artifact@v3
         with:
