@@ -1,12 +1,20 @@
-name: Publish
-on: push
+name: Build and publish binaries
+
+on:
+  push:
+    branches:
+     - master
+
 jobs:
   publish:
     strategy:
       matrix:
-        goos: [linux, windows]
-        goarch: [amd64, arm64]
-    runs-on: ubuntu-20.04
+        goos: [linux, windows, darwin]
+        goarch: [386, amd64, arm64]
+        exclude:
+          - goos: darwin
+            goarch: 386
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -24,7 +32,7 @@ jobs:
         run: |
           go build -v -ldflags="-s -w" -o build/kitsh_${GOOS}_${GOARCH} ./cmd/kitsh
       - name: Publish a release
-        if: ${{ startsWith(github.event.head_commit.message, '[release]') }}
+        if: startsWith(github.event.head_commit.message, '[release]')
         uses: ncipollo/release-action@v1
         with:
           artifacts: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
