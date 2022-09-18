@@ -1,0 +1,39 @@
+name: Publish
+on: push
+jobs:
+  publish:
+    strategy:
+      matrix:
+        goos: [linux, windows]
+        goarch: [amd64, arm64]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '>=1.18'
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build -v -ldflags="-s -w" -o build/kitsh_${GOOS}_${GOARCH} ./cmd/kitsh
+      - name: Publish a release
+        if: ${{ startsWith(github.event.head_commit.message, '[release]') }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
+          artifactContentType: application/octet-stream
+          draft: true
+          tag: ${{ github.sha }}
+          allowUpdates: true
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
