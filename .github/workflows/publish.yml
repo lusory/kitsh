@@ -1,0 +1,28 @@
+name: Publish
+on: push
+jobs:
+  publish:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: >=1.18
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags="-s -w" -o build/kitsh_linux_amd64
+      - name: Publish a release
+        if: ${{ startsWith(github.event.head_commit.message, '[release]') }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: build/kitsh_linux_amd64
+          artifactContentType: application/octet-stream
+          draft: true
+          token: ${{ secrets.YOUR_GITHUB_TOKEN }}
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: kitsh_linux_amd64
+          path: build/kitsh_linux_amd64
