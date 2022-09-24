@@ -20,7 +20,14 @@ import (
 	"strings"
 )
 
+// UnknownArchitecture is an error about an unknown architecture.
 var UnknownArchitecture = errors.New("unknown architecture")
+
+// InvalidRAMSize is an error about an invalid RAM memory size (size must be positive).
+var InvalidRAMSize = errors.New("invalid ram size")
+
+// UnknownPowerAction is an error about an unknown power action.
+var UnknownPowerAction = errors.New("unknown power action")
 
 // forEachVms invokes the supplied callback for every virtual machine in the supplied stream.
 func forEachVms(vms v1.VirtualMachineRegistryService_GetVirtualMachinesClient, forEach func(image *v1.VirtualMachine) error) error {
@@ -88,6 +95,11 @@ func CreateVirtualMachine(cCtx *cli.Context) error {
 		return err
 	}
 
+	mem := cCtx.Uint64("memory")
+	if mem <= 0 {
+		return InvalidRAMSize
+	}
+
 	arch, ok := v1.Architecture_value[strings.ToUpper(cCtx.String("arch"))]
 	if !ok {
 		return UnknownArchitecture
@@ -102,7 +114,7 @@ func CreateVirtualMachine(cCtx *cli.Context) error {
 		context.Background(),
 		&v1.CreateVirtualMachineRequest{
 			Arch:       v1.Architecture(arch),
-			MemorySize: cCtx.Uint64("memory"),
+			MemorySize: mem,
 			Data: &v1.MetadataMap{
 				Data: data,
 			},
@@ -377,6 +389,43 @@ func VNC(cCtx *cli.Context) error {
 		color.Green("A VNC viewer is running: %s", url)
 	}
 	return serveVNC(httpHost)
+}
+
+// Power is a handler for the "vm power" command.
+func Power(cCtx *cli.Context) error {
+	client, err := libkitsune.NewOrCachedKitsuneClient(cCtx.String("target"), cCtx.Bool("ssl"))
+	if err != nil {
+		return err
+	}
+
+	action, ok := v1.ACPIAction_value[strings.ToUpper(cCtx.String("action"))]
+	if !ok {
+		return UnknownPowerAction
+	}
+
+	id, err := uuid.Parse(cCtx.String("id"))
+	if err != nil {
+		return err
+	}
+
+	res, err := client.VmRegistry.SendACPIAction(
+		context.Background(),
+		&v1.SendACPIActionRequest{
+			Machine: &v1.UUID{
+				Value: id.String(),
+			},
+			Action: v1.ACPIAction(action),
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+	if res.GetError() != nil {
+		return formatError(res.GetError())
+	}
+
+	return nil
 }
 
 // GetVmMetadata is a handler for the "vm metadata" command.

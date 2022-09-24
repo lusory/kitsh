@@ -18,6 +18,9 @@ import (
 // UnknownFormat is an error about a missing image format.
 var UnknownFormat = errors.New("unknown format")
 
+// InvalidImageSize is an error about an invalid image size (size must be positive).
+var InvalidImageSize = errors.New("invalid image size")
+
 // forEachImages invokes the supplied callback for every image in the supplied stream.
 func forEachImages(images v1.ImageRegistryService_GetImagesClient, forEach func(image *v1.Image) error) error {
 	for {
@@ -84,6 +87,11 @@ func CreateImage(cCtx *cli.Context) error {
 		return err
 	}
 
+	size := cCtx.Uint64("size")
+	if size <= 0 {
+		return InvalidImageSize
+	}
+
 	format, ok := v1.Image_Format_value[strings.ToUpper(cCtx.String("format"))]
 	if !ok {
 		return UnknownFormat
@@ -98,7 +106,7 @@ func CreateImage(cCtx *cli.Context) error {
 		context.Background(),
 		&v1.CreateImageRequest{
 			Format: v1.Image_Format(format),
-			Size:   cCtx.Uint64("size"),
+			Size:   size,
 			Data: &v1.MetadataMap{
 				Data: data,
 			},

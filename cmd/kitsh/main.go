@@ -69,7 +69,7 @@ func main() {
 							&cli.Uint64Flag{
 								Name:     "size",
 								Aliases:  []string{"s"},
-								Usage:    "the image size in bytes, must not be negative",
+								Usage:    "the image size in bytes, must be positive",
 								Required: true,
 							},
 							&cli.StringFlag{
@@ -158,7 +158,7 @@ func main() {
 							&cli.Uint64Flag{
 								Name:     "memory",
 								Aliases:  []string{"m"},
-								Usage:    "the virtual machine RAM size in megabytes, must not be negative",
+								Usage:    "the virtual machine RAM size in megabytes, must be positive",
 								Required: true,
 							},
 							&cli.StringFlag{
@@ -262,6 +262,24 @@ func main() {
 							},
 						},
 						Action: handler.VNC,
+					},
+					{
+						Name:  "power",
+						Usage: "sends a power command to the virtual machine",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "id",
+								Aliases:  []string{"i"},
+								Usage:    "the virtual machine UUID (must conform to a v4 UUID)",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "action",
+								Aliases:  []string{"a"},
+								Usage:    "the power action (poweron, poweroff, reset)",
+								Required: true,
+							},
+						},
 					},
 					{
 						Name:  "metadata",
