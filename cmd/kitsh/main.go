@@ -280,7 +280,7 @@ func main() {
 								Required: true,
 							},
 						},
-						Handler: handler.Power,
+						Action: handler.Power,
 					},
 					{
 						Name:  "metadata",
