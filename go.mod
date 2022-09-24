@@ -6,7 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/google/uuid v1.3.0
-	github.com/lusory/libkitsune v0.0.0-20220902174542-3e64336ec215
+	github.com/lusory/libkitsune v0.0.0-20220924145006-e35c9b83cf92
 	github.com/peterh/liner v1.2.2
 	github.com/rodaine/table v1.0.1
 	github.com/urfave/cli/v2 v2.11.2
@@ -24,8 +24,8 @@ require (
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
-	golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41 // indirect
+	golang.org/x/net v0.0.0-20220923203811-8be639271d50 // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220902135211-223410557253 // indirect
+	google.golang.org/genproto v0.0.0-20220923205249-dd2d53f1fffc // indirect
 )
