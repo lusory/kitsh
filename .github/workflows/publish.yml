@@ -28,14 +28,15 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GOEXT: ${{ matrix.goos == 'windows' && '.exe' || '' }}
           CGO_ENABLED: 0
         run: |
-          go build -v -ldflags="-s -w" -o build/kitsh_${GOOS}_${GOARCH} ./cmd/kitsh
+          go build -v -ldflags="-s -w" -o build/kitsh_${GOOS}_${GOARCH}${GOEXT} ./cmd/kitsh
       - name: Publish a release
         if: startsWith(github.event.head_commit.message, '[release]')
         uses: ncipollo/release-action@v1
         with:
-          artifacts: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
+          artifacts: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
           artifactContentType: application/octet-stream
           draft: true
           tag: ${{ github.sha }}
@@ -43,5 +44,5 @@ jobs:
       - name: Publish artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
-          path: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}
+          name: kitsh_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          path: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
