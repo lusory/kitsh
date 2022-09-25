@@ -29,6 +29,9 @@ var InvalidRAMSize = errors.New("invalid ram size")
 // UnknownPowerAction is an error about an unknown power action.
 var UnknownPowerAction = errors.New("unknown power action")
 
+// NoOpenWebSocket is an error about an opened WebSocket not being found in a virtual machine's VNC servers.
+var NoOpenWebSocket = errors.New("no open websocket found")
+
 // forEachVms invokes the supplied callback for every virtual machine in the supplied stream.
 func forEachVms(vms v1.VirtualMachineRegistryService_GetVirtualMachinesClient, forEach func(image *v1.VirtualMachine) error) error {
 	for {
@@ -355,9 +358,9 @@ func VNC(cCtx *cli.Context) error {
 		return err
 	}
 
-	res, err := client.VmRegistry.GetVNCServer(
+	res, err := client.VmRegistry.GetVNCServers(
 		context.Background(),
-		&v1.GetVNCServerRequest{
+		&v1.GetVNCServersRequest{
 			Id: &v1.UUID{
 				Value: id.String(),
 			},
@@ -370,7 +373,11 @@ func VNC(cCtx *cli.Context) error {
 		return formatError(res.GetError())
 	}
 
-	vncServer := res.GetServer()
+	sock := findWebSocket(res.GetServers())
+	if sock == nil {
+		return NoOpenWebSocket
+	}
+
 	httpHost := cCtx.String("http-host")
 	if strings.HasPrefix(httpHost, ":") { // add localhost prefix if only port is defined
 		httpHost = "localhost" + httpHost
@@ -382,7 +389,7 @@ func VNC(cCtx *cli.Context) error {
 	}
 
 	//goland:noinspection HttpUrlsUsage - no TLS certificate support
-	url := fmt.Sprintf("http://%s/?host=%s&port=%d&path=", httpHost, vncHost, vncServer.GetWebSocketPort())
+	url := fmt.Sprintf("http://%s/?host=%s&port=%d&path=", httpHost, vncHost, sock.GetPort())
 	if cCtx.Bool("no-pretty") {
 		fmt.Println(url)
 	} else {
@@ -480,4 +487,16 @@ func serveVNC(target string) error {
 	r.Get("/vendor/*", novncServ.ServeHTTP)
 
 	return http.ListenAndServe(target, r)
+}
+
+// findWebSocket tries to find the first open WebSocket, returns nil if no WebSocket is open.
+func findWebSocket(servers []*v1.VNCServer) *v1.VNCServerSocket {
+	for _, vncServer := range servers {
+		for _, sock := range vncServer.GetSockets() {
+			if sock.GetIsWebSocket() {
+				return sock
+			}
+		}
+	}
+	return nil
 }
