@@ -32,6 +32,11 @@ jobs:
           CGO_ENABLED: 0
         run: |
           go build -v -ldflags="-s -w" -o build/kitsh_${GOOS}_${GOARCH}${GOEXT} ./cmd/kitsh
+      - name: Truncate SHA
+        id: truncate_sha
+        shell: bash
+        run: |
+          echo "::set-output name=truncated_sha::${GITHUB_SHA::7}"
       - name: Publish a release
         if: startsWith(github.event.head_commit.message, '[release]')
         uses: ncipollo/release-action@v1
@@ -39,9 +44,9 @@ jobs:
           artifacts: build/kitsh_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
           artifactContentType: application/octet-stream
           draft: true
-          tag: ${{ github.sha }}
+          tag: ${{ steps.truncate_sha.outputs.truncated_sha }}
           allowUpdates: true
-      - name: Publish artifacts
+      - name: Publish an artifact
         uses: actions/upload-artifact@v3
         with:
           name: kitsh_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }}
