@@ -425,7 +425,7 @@ func Power(cCtx *cli.Context) error {
 		return err
 	}
 
-	action, ok := v1.ACPIAction_value[strings.ToUpper(cCtx.String("action"))]
+	action, ok := v1.PowerAction_value[strings.ToUpper(cCtx.String("action"))]
 	if !ok {
 		return UnknownPowerAction
 	}
@@ -435,13 +435,13 @@ func Power(cCtx *cli.Context) error {
 		return err
 	}
 
-	res, err := client.VmRegistry.SendACPIAction(
+	res, err := client.VmRegistry.SendPowerAction(
 		cCtx.Context,
-		&v1.SendACPIActionRequest{
+		&v1.SendPowerActionRequest{
 			Machine: &v1.UUID{
 				Value: id.String(),
 			},
-			Action: v1.ACPIAction(action),
+			Action: v1.PowerAction(action),
 		},
 	)
 

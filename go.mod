@@ -6,7 +6,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/google/uuid v1.3.0
-	github.com/lusory/libkitsune v0.0.0-20220925142530-2b2281a5b3ae
+	github.com/lusory/libkitsune v0.0.0-20220926145821-62265477d67a
 	github.com/peterh/liner v1.2.2
 	github.com/rodaine/table v1.0.1
 	github.com/urfave/cli/v2 v2.11.2
