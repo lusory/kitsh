@@ -83,7 +83,7 @@ func Console(cCtx *cli.Context) error {
 			}
 
 			newArgs := append([]string{file, "--target", cCtx.String("target")}, args...)
-			if err := cCtx.App.RunContext(context.WithValue(context.Background(), ConsoleCtxKey, args), newArgs); err != nil {
+			if err := cCtx.App.RunContext(context.WithValue(cCtx.Context, ConsoleCtxKey, args), newArgs); err != nil {
 				color.Red("%s", err)
 			}
 

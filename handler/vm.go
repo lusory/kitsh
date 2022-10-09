@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"context"
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,7 +17,9 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 )
 
 // UnknownArchitecture is an error about an unknown architecture.
@@ -57,7 +59,7 @@ func ListVirtualMachines(cCtx *cli.Context) error {
 		return err
 	}
 
-	vms, err := client.VmRegistry.GetVirtualMachines(context.Background(), &emptypb.Empty{})
+	vms, err := client.VmRegistry.GetVirtualMachines(cCtx.Context, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -114,7 +116,7 @@ func CreateVirtualMachine(cCtx *cli.Context) error {
 	}
 
 	oneof, err := client.VmRegistry.CreateVirtualMachine(
-		context.Background(),
+		cCtx.Context,
 		&v1.CreateVirtualMachineRequest{
 			Arch:       v1.Architecture(arch),
 			MemorySize: mem,
@@ -167,7 +169,7 @@ func DeleteVirtualMachine(cCtx *cli.Context) error {
 	}
 
 	res, err := client.VmRegistry.DeleteVirtualMachine(
-		context.Background(),
+		cCtx.Context,
 		&v1.DeleteVirtualMachineRequest{
 			Id: &v1.UUID{
 				Value: id.String(),
@@ -198,7 +200,7 @@ func GetStatus(cCtx *cli.Context) error {
 	}
 
 	res, err := client.VmRegistry.IsAlive(
-		context.Background(),
+		cCtx.Context,
 		&v1.IsAliveRequest{
 			Id: &v1.UUID{
 				Value: id.String(),
@@ -239,7 +241,7 @@ func Images(cCtx *cli.Context) error {
 	}
 
 	images, err := client.VmRegistry.GetAttachedImages(
-		context.Background(),
+		cCtx.Context,
 		&v1.GetAttachedImagesRequest{
 			Id: &v1.UUID{
 				Value: id.String(),
@@ -288,7 +290,7 @@ func AttachImage(cCtx *cli.Context) error {
 	}
 
 	res, err := client.VmRegistry.AttachImage(
-		context.Background(),
+		cCtx.Context,
 		&v1.AttachImageRequest{
 			Machine: &v1.UUID{
 				Value: id.String(),
@@ -326,7 +328,7 @@ func DetachImage(cCtx *cli.Context) error {
 	}
 
 	res, err := client.VmRegistry.DetachImage(
-		context.Background(),
+		cCtx.Context,
 		&v1.DetachImageRequest{
 			Machine: &v1.UUID{
 				Value: id.String(),
@@ -359,7 +361,7 @@ func VNC(cCtx *cli.Context) error {
 	}
 
 	res, err := client.VmRegistry.GetVNCServers(
-		context.Background(),
+		cCtx.Context,
 		&v1.GetVNCServersRequest{
 			Id: &v1.UUID{
 				Value: id.String(),
@@ -395,7 +397,25 @@ func VNC(cCtx *cli.Context) error {
 	} else {
 		color.Green("A VNC viewer is running: %s", url)
 	}
-	return serveVNC(httpHost)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	srv, err := serveVNC(httpHost, wg)
+	if err != nil {
+		return err
+	}
+
+	if !cCtx.Bool("no-pretty") {
+		color.Yellow("Press 'Enter' to stop the HTTP server.")
+	}
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+
+	defer wg.Wait()
+	if err := srv.Shutdown(cCtx.Context); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Power is a handler for the "vm power" command.
@@ -416,7 +436,7 @@ func Power(cCtx *cli.Context) error {
 	}
 
 	res, err := client.VmRegistry.SendACPIAction(
-		context.Background(),
+		cCtx.Context,
 		&v1.SendACPIActionRequest{
 			Machine: &v1.UUID{
 				Value: id.String(),
@@ -464,15 +484,15 @@ func ClearVmMetadata(cCtx *cli.Context) error {
 }
 
 // serveVNC starts an HTTP server serving a small noVNC application.
-func serveVNC(target string) error {
+func serveVNC(target string, wg *sync.WaitGroup) (*http.Server, error) {
 	novncFs, err := fs.Sub(kitsh.NoVNCEmbed, "noVNC")
 	if err != nil {
-		return err
+		return &http.Server{}, err
 	}
 
 	indexPage, err := kitsh.NoVNCEmbed.ReadFile("noVNC/vnc_lite.html")
 	if err != nil {
-		return err
+		return &http.Server{}, err
 	}
 
 	novncServ := http.FileServer(http.FS(novncFs))
@@ -486,7 +506,17 @@ func serveVNC(target string) error {
 	r.Get("/core/*", novncServ.ServeHTTP)
 	r.Get("/vendor/*", novncServ.ServeHTTP)
 
-	return http.ListenAndServe(target, r)
+	srv := &http.Server{Addr: target, Handler: r}
+
+	go func() {
+		defer wg.Done()
+
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			color.Red("http server errored (%s)", err.Error())
+		}
+	}()
+
+	return srv, nil
 }
 
 // findWebSocket tries to find the first open WebSocket, returns nil if no WebSocket is open.

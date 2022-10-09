@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,7 +45,7 @@ func ListImages(cCtx *cli.Context) error {
 		return err
 	}
 
-	images, err := client.ImageRegistry.GetImages(context.Background(), &emptypb.Empty{})
+	images, err := client.ImageRegistry.GetImages(cCtx.Context, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -103,7 +102,7 @@ func CreateImage(cCtx *cli.Context) error {
 	}
 
 	oneof, err := client.ImageRegistry.CreateImage(
-		context.Background(),
+		cCtx.Context,
 		&v1.CreateImageRequest{
 			Format: v1.Image_Format(format),
 			Size:   size,
@@ -158,7 +157,7 @@ func DeleteImage(cCtx *cli.Context) error {
 	}
 
 	res, err := client.ImageRegistry.DeleteImage(
-		context.Background(),
+		cCtx.Context,
 		&v1.DeleteImageRequest{
 			Id: &v1.UUID{
 				Value: id.String(),

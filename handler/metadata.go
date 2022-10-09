@@ -25,7 +25,7 @@ func GetMetadataFunc(registry MetadatableRegistry) func(cCtx *cli.Context) error
 		}
 
 		meta, err := registry.GetMetadata(
-			context.Background(),
+			cCtx.Context,
 			&v1.GetMetadataRequest{
 				Id: &v1.UUID{
 					Value: id.String(),
@@ -66,7 +66,7 @@ func SetMetadataFunc(registry MetadatableRegistry) func(cCtx *cli.Context) error
 		}
 
 		res, err := registry.SetMetadata(
-			context.Background(),
+			cCtx.Context,
 			&v1.SetMetadataRequest{
 				Id: &v1.UUID{
 					Value: id.String(),
