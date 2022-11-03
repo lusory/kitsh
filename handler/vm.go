@@ -142,7 +142,6 @@ func CreateVirtualMachine(cCtx *cli.Context) error {
 		}
 
 		fmt.Println(string(data))
-		return nil
 	} else {
 		tbl := table.New("ID", "Architecture", "Memory size")
 		tbl.AddRow(
@@ -220,9 +219,10 @@ func GetStatus(cCtx *cli.Context) error {
 	} else {
 		fmt.Print("Status: ")
 		if res.GetAlive() {
-			color.Green("Running")
+			PrintSuccess("Running\n")
 		} else {
-			color.Red("Stopped")
+			// not using PrintError, don't want to print to stderr here
+			_, _ = ErrorColor.Println("Stopped")
 		}
 	}
 	return nil
@@ -395,7 +395,7 @@ func VNC(cCtx *cli.Context) error {
 	if cCtx.Bool("no-pretty") {
 		fmt.Println(url)
 	} else {
-		color.Green("A VNC viewer is running: %s", url)
+		PrintSuccess("A VNC viewer is running: %s\n", url)
 	}
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -512,7 +512,7 @@ func serveVNC(target string, wg *sync.WaitGroup) (*http.Server, error) {
 		defer wg.Done()
 
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			color.Red("http server errored (%s)", err.Error())
+			PrintError("http server errored: %s\n", err)
 		}
 	}()
 

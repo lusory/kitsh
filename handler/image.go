@@ -128,7 +128,6 @@ func CreateImage(cCtx *cli.Context) error {
 		}
 
 		fmt.Println(string(data))
-		return nil
 	} else {
 		tbl := table.New("ID", "Format", "Size", "Read-only", "Media type", "Metadata")
 		tbl.AddRow(

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/fatih/color"
 	"github.com/lusory/kitsh/handler"
 	"github.com/urfave/cli/v2"
 	"os"
@@ -20,6 +19,13 @@ func main() {
 
 			cli.HandleExitCoder(err)
 		},
+		Before: func(cCtx *cli.Context) error {
+			if cCtx.Bool("no-pretty") {
+				handler.SuccessColor.DisableColor()
+				handler.ErrorColor.DisableColor()
+			}
+			return nil
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "target",
@@ -35,7 +41,7 @@ func main() {
 			},
 			&cli.BoolFlag{
 				Name:  "no-pretty",
-				Usage: "disables pretty-printing of gRPC responses",
+				Usage: "disables pretty-printing of output (useful for scripting)",
 				Value: false,
 			},
 		},
@@ -44,7 +50,14 @@ func main() {
 				Name:    "console",
 				Aliases: []string{"c", "interactive", "shell"},
 				Usage:   "launches an interactive console for issuing commands",
-				Action:  handler.Console,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "no-history",
+						Usage: "disables loading and saving of console history",
+						Value: false,
+					},
+				},
+				Action: handler.Console,
 			},
 			{
 				Name:    "image",
@@ -328,7 +341,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		color.Red("%s", err)
+		handler.PrintError("%s\n", err)
 		os.Exit(1)
 	}
 }

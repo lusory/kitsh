@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"errors"
-	"github.com/fatih/color"
 	"github.com/peterh/liner"
 	"github.com/urfave/cli/v2"
 	"os"
@@ -52,19 +51,21 @@ func Console(cCtx *cli.Context) error {
 		return
 	})
 
-	if f, err := os.Open(historyFile); err == nil {
-		line.ReadHistory(f)
-		f.Close()
-	}
-
-	defer func() {
-		if f, err := os.Create(historyFile); err == nil {
-			line.WriteHistory(f)
+	if !cCtx.Bool("no-history") {
+		if f, err := os.Open(historyFile); err == nil {
+			line.ReadHistory(f)
 			f.Close()
-		} else {
-			color.Red("Error writing history file: %s", err)
 		}
-	}()
+
+		defer func() {
+			if f, err := os.Create(historyFile); err == nil {
+				line.WriteHistory(f)
+				f.Close()
+			} else {
+				PrintError("error writing history file: %s\n", err)
+			}
+		}()
+	}
 
 	for {
 		if text, err := line.Prompt("kitsh> "); err == nil {
@@ -84,14 +85,14 @@ func Console(cCtx *cli.Context) error {
 
 			newArgs := append([]string{file, "--target", cCtx.String("target")}, args...)
 			if err := cCtx.App.RunContext(context.WithValue(cCtx.Context, ConsoleCtxKey, args), newArgs); err != nil {
-				color.Red("%s", err)
+				PrintError("%s\n", err)
 			}
 
 			line.AppendHistory(text)
 		} else if err == liner.ErrPromptAborted { // Ctrl+C
 			break
 		} else {
-			color.Red("Failed to read input: %s", err)
+			PrintError("failed to read input: %s\n", err)
 		}
 	}
 
